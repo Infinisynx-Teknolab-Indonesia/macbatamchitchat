@@ -1,0 +1,41 @@
+name: batam_chitchat_mac
+description: Batam ChitChat desktop client — versi macOS (project terpisah dari yang Windows).
+publish_to: "none"
+version: 1.0.0+1
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  socket_io_client: ^2.0.3+1       # realtime connection ke backend FastAPI/Socket.IO — sama seperti Windows
+  flutter_secure_storage: ^9.2.2   # encrypted storage token login — sama seperti Windows
+  window_manager: ^0.4.3           # custom title bar — dukung macOS, sama seperti Windows
+  http: ^1.2.2
+  crypto: ^3.0.3
+  intl: ^0.19.0
+  geolocator: ^13.0.1
+  permission_handler: ^11.3.1
+  path_provider: ^2.1.4
+  url_launcher: ^6.3.0
+  desktop_multi_window: ^0.2.1      # dukung macOS juga — TAPI lihat catatan NATIVE_SETUP di bawah
+  audioplayers: ^6.1.0
+  file_picker: ^8.1.2
+  # GANTI dari webview_windows (Windows-only) -> webview_flutter (cross-platform,
+  # dipakai WKWebView di macOS). Lihat room_chat_screen.dart yang sudah di-port.
+  webview_flutter: ^4.8.0
+  tray_manager: ^0.5.2
+  livekit_client: ^2.3.0
+  uuid: ^4.4.0
+  package_info_plus: ^8.0.0
+  # ffi DIHAPUS di sini — cuma dipakai Windows-only untuk SetEnvironmentVariableW
+  # (lihat services/webview2_autoplay_fix.dart), file itu TIDAK dipakai/disalin
+  # ke project macOS ini sama sekali.
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/sounds/buzz.wav
+    - assets/icons/logo_batamchitchat.png
