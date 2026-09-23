@@ -1,0 +1,93 @@
+name: Build macOS DMG
+
+# Cara pakai:
+#   - Manual: buka tab "Actions" di repo GitHub-mu -> pilih workflow "Build
+#     macOS DMG" di sebelah kiri -> klik "Run workflow".
+#   - Otomatis: setiap kamu push tag berawalan "v" (mis. git tag v1.0.0 &&
+#     git push origin v1.0.0), workflow ini jalan sendiri.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    # Komputer Mac sungguhan di cloud milik GitHub — gratis dalam jatah
+    # bulanan akun kamu, tidak perlu Mac fisik sama sekali.
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Pasang Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: flutter build macos --release
+        run: flutter build macos --release
+
+      - name: Cari nama file .app hasil build
+        id: appname
+        run: |
+          APP_PATH=$(find build/macos/Build/Products/Release -maxdepth 1 -name "*.app")
+          echo "APP_PATH=$APP_PATH" >> "$GITHUB_OUTPUT"
+          echo "APP_NAME=$(basename "$APP_PATH" .app)" >> "$GITHUB_OUTPUT"
+
+      # ------------------------------------------------------------------
+      # BELUM di-code-sign / notarize di sini — hasil .app/.dmg dari langkah
+      # ini bisa dipakai orang lain, tapi mereka harus klik kanan > Open
+      # (bukan double-click biasa) sekali di awal untuk lewati peringatan
+      # "developer tidak dikenal", karena Apple belum memverifikasinya.
+      #
+      # Kalau nanti kamu sudah punya Apple Developer Program ($99/tahun),
+      # kabari saya — saya tambahkan langkah code sign + notarize di sini
+      # (perlu simpan sertifikat & app-specific password sebagai GitHub
+      # Secrets, tidak boleh ditulis langsung di file ini).
+      # ------------------------------------------------------------------
+
+      - name: Pasang create-dmg
+        run: brew install create-dmg
+
+      - name: Bungkus jadi .dmg
+        run: |
+          create-dmg \
+            --volname "Batam ChitChat" \
+            --window-size 500 300 \
+            --icon-size 100 \
+            --app-drop-link 350 120 \
+            "BatamChitChatInstaller.dmg" \
+            "${{ steps.appname.outputs.APP_PATH }}" \
+          || true
+          # "|| true" karena create-dmg kadang exit code 1 walau .dmg-nya
+          # tetap berhasil dibuat (bug lama yang sudah dikenal alatnya) —
+          # langkah berikutnya yang benar-benar memastikan hasilnya ada.
+
+      - name: Pastikan .dmg benar-benar ada
+        run: |
+          test -f "BatamChitChatInstaller.dmg"
+          ls -la BatamChitChatInstaller.dmg
+
+      # Menyimpan file .dmg supaya bisa diunduh dari halaman ringkasan run
+      # ini di tab Actions (klik run yang selesai -> scroll ke "Artifacts").
+      - name: Upload .dmg sebagai artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BatamChitChatInstaller
+          path: BatamChitChatInstaller.dmg
+          retention-days: 30
+
+      # Kalau workflow ini terpicu oleh TAG (git push origin v1.0.0), file
+      # .dmg-nya juga otomatis dilampirkan ke GitHub Release dengan tag itu
+      # — jadi ada link download permanen, bukan cuma artifact yang
+      # kadaluarsa 30 hari.
+      - name: Lampirkan ke GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: BatamChitChatInstaller.dmg
